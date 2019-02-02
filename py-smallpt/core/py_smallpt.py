@@ -14,15 +14,15 @@ REFRACTIVE_INDEX_OUT = 1.0
 REFRACTIVE_INDEX_IN = 1.5
 
 spheres = [
-        Sphere(1e5,  Vector3(1e5 + 1, 40.8, 81.6),   f=Vector3(0.75,0.25,0.25)),
-	    Sphere(1e5,  Vector3(-1e5 + 99, 40.8, 81.6), f=Vector3(0.25,0.25,0.75)),
-	    Sphere(1e5,  Vector3(50, 40.8, 1e5),         f=Vector3(0.75, 0.75, 0.75)),
+        Sphere(1e5,  Vector3(1e5 + 1, 40.8, 81.6),   f=Vector3(0.75,0.25,0.25)), #red wall
+	    Sphere(1e5,  Vector3(-1e5 + 99, 40.8, 81.6), f=Vector3(0.25,0.25,0.75)), #blue wall
+	    Sphere(1e5,  Vector3(50, 40.8, 1e5),         f=Vector3(0.75, 0.75, 0.75)), #gray wall
 	    Sphere(1e5,  Vector3(50, 40.8, -1e5 + 170)),
-	    Sphere(1e5,  Vector3(50, 1e5, 81.6),         f=Vector3(0.75, 0.75, 0.75)),
-	    Sphere(1e5,  Vector3(50, -1e5 + 81.6, 81.6), f=Vector3(0.75, 0.75, 0.75)),
-	    Sphere(16.5, Vector3(27, 16.5, 47),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.SPECULAR),
-	    Sphere(16.5, Vector3(73, 16.5, 78),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.REFRACTIVE),
-	    Sphere(600,  Vector3(50, 681.6 - .27, 81.6), e=Vector3(12, 12, 12))
+	    Sphere(1e5,  Vector3(50, 1e5, 81.6),         f=Vector3(0.75, 0.75, 0.75)), #gray wall
+	    Sphere(1e5,  Vector3(50, -1e5 + 81.6, 81.6), f=Vector3(0.75, 0.75, 0.75)), #gray wall
+	    Sphere(16.5, Vector3(27, 16.5, 47),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.SPECULAR), #reflective sphere
+	    Sphere(16.5, Vector3(73, 16.5, 78),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.REFRACTIVE), #refractive
+	    Sphere(600,  Vector3(50, 681.6 - .27, 81.6), e=Vector3(12, 12, 12)) #light
         ]
 
 
@@ -99,6 +99,7 @@ if __name__ == "__main__":
     w = 1024
     h = 768
 
+    #setup orthographic camera
     eye = Vector3(50, 52, 295.6)
     gaze = Vector3(0, -0.042612, -1).normalize()
     fov = 0.5135
@@ -120,9 +121,9 @@ if __name__ == "__main__":
                 dx = rng.uniform_float()
                 dy = rng.uniform_float()
 
-                #create camera vector multipliers that range between screen-space coordinates of -1.0 to 1.0
-                cam_x_multiplier = ((dx + x) / w - 0.5) * 2.0
-                cam_y_multiplier = ((dy + y) / h - 0.5) * 2.0
+                #create camera vector multipliers that range between screen-space coordinates of -0.5 to 0.5
+                cam_x_multiplier = (dx + x) / w - 0.5
+                cam_y_multiplier = (dy + y) / h - 0.5
 
                 directional_vec = cam_x * cam_x_multiplier + cam_y * cam_y_multiplier + gaze
                 L = radiance(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON_SPHERE), rng)
