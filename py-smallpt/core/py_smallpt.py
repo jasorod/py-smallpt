@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from image_io import write_ppm
 from math import sqrt
 from ray import Ray
@@ -87,8 +89,8 @@ import sys
 import argparse
 
 parser = argparse.ArgumentParser(description= "Small python based path tracer")
-parser.add_argument("--samples", type="int", default=4)
-args = parser.parse_args(sys.argv)
+parser.add_argument("--samples", type=int, default=4)
+args = parser.parse_args()
 
 if __name__ == "__main__":
     rng = RNG()
@@ -100,8 +102,8 @@ if __name__ == "__main__":
     eye = Vector3(50, 52, 295.6)
     gaze = Vector3(0, -0.042612, -1).normalize()
     fov = 0.5135
-    cx = Vector3(w * fov / h, 0.0, 0.0)
-    cy = cx.cross(gaze).normalize() * fov
+    cam_x = Vector3(w * fov / h, 0.0, 0.0)
+    cam_y = cam_x.cross(gaze).normalize() * fov
 
     Ls = [None] * w * h
     for i in range(w * h):
@@ -109,24 +111,21 @@ if __name__ == "__main__":
     
     for y in range(h):
         # pixel row
-        print('\rRendering ({0} spp) {1:0.2f}%'.format(nb_samples * 4, 100.0 * y / (h - 1)))
+        print('\rRendering ({0} spp) {1:0.2f}%'.format(nb_samples, 100.0 * y / (h - 1)))
         for x in range(w):
             # pixel column
-            for sy in range(2):
-                i = (h - 1 - y) * w + x
-                # 2 subpixel row
-                for sx in range(2):
-                    # 2 subpixel column
-                    L = Vector3()
-                    for s in range(nb_samples):
-                        #  samples per subpixel
-                        u1 = 2.0 * rng.uniform_float()
-                        u2 = 2.0 * rng.uniform_float()
-                        dx = sqrt(u1) - 1.0 if u1 < 1 else 1.0 - sqrt(2.0 - u1)
-                        dy = sqrt(u2) - 1.0 if u2 < 1 else 1.0 - sqrt(2.0 - u2)
-                        d = cx * (((sx + 0.5 + dx) / 2.0 + x) / w - 0.5) + \
-                            cy * (((sy + 0.5 + dy) / 2.0 + y) / h - 0.5) + gaze
-                        L += radiance(Ray(eye + d * 130, d.normalize(), tmin=Sphere.EPSILON_SPHERE), rng) * (1.0 / nb_samples)
-                    Ls[i] += 0.25 * Vector3.clamp(L)
+            i = (h - 1 - y) * w + x
+            for s in range (nb_samples):
+                # samples per pixel
+                dx = rng.uniform_float()
+                dy = rng.uniform_float()
+
+                #create camera vector multipliers that range between screen-space coordinates of -1.0 to 1.0
+                cam_x_multiplier = ((dx + x) / w - 0.5) * 2.0
+                cam_y_multiplier = ((dy + y) / h - 0.5) * 2.0
+
+                directional_vec = cam_x * cam_x_multiplier + cam_y * cam_y_multiplier + gaze
+                L = radiance(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON_SPHERE), rng)
+                Ls[i] +=  (1.0 / nb_samples) * Vector3.clamp(L)
 
     write_ppm(w, h, Ls)
