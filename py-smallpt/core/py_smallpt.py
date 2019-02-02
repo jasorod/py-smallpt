@@ -84,10 +84,15 @@ def radiance(ray, rng):
             continue
 
 import sys
+import argparse
+
+parser = argparse.ArgumentParser(description= "Small python based path tracer")
+parser.add_argument("--samples", type="int", default=4)
+args = parser.parse_args(sys.argv)
 
 if __name__ == "__main__":
     rng = RNG()
-    nb_samples = int(sys.argv[1]) // 4 if len(sys.argv) > 1 else 1
+    nb_samples = args.samples
 
     w = 1024
     h = 768
