@@ -14,15 +14,15 @@ REFRACTIVE_INDEX_OUT = 1.0
 REFRACTIVE_INDEX_IN = 1.5
 
 spheres = [
-    Sphere("red wall", 1e5,  Vector3(1e5 + 1, 40.8, 81.6),   f=Vector3(0.75,0.25,0.25)), #red wall
-    Sphere("blue wall", 1e5,  Vector3(-1e5 + 99, 40.8, 81.6), f=Vector3(0.25,0.25,0.75)), #blue wall
-    Sphere("gray wall", 1e5,  Vector3(50, 40.8, 1e5),         f=Vector3(0.75, 0.75, 0.75)), #gray wall
+    Sphere("red wall", 1e5,  Vector3(1e5 + 1, 40.8, 81.6),   f=Vector3(0.75,0.25,0.25)),
+    Sphere("blue wall", 1e5,  Vector3(-1e5 + 99, 40.8, 81.6), f=Vector3(0.25,0.25,0.75)),
+    Sphere("gray wall", 1e5,  Vector3(50, 40.8, 1e5),         f=Vector3(0.75, 0.75, 0.75)),
     Sphere("env", 1e5,  Vector3(50, 40.8, -1e5 + 170)),
-    Sphere("celing", 1e5,  Vector3(50, 1e5, 81.6),         f=Vector3(0.75, 0.75, 0.75)), #gray wall
-    Sphere("floor", 1e5,  Vector3(50, -1e5 + 81.6, 81.6), f=Vector3(0.75, 0.75, 0.75)), #gray wall
-    Sphere("reflective sphere", 16.5, Vector3(27, 16.5, 47),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.SPECULAR), #reflective sphere
-    Sphere("refractive sphere", 16.5, Vector3(73, 16.5, 78),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.REFRACTIVE), #refractive
-    Sphere("light", 10,  Vector3(50, 70, 81.6), e=Vector3(12, 12, 12)) #light
+    Sphere("celing", 1e5,  Vector3(50, 1e5, 81.6),         f=Vector3(0.75, 0.75, 0.75)),
+    Sphere("floor", 1e5,  Vector3(50, -1e5 + 81.6, 81.6), f=Vector3(0.75, 0.75, 0.75)),
+    Sphere("reflective sphere", 16.5, Vector3(27, 16.5, 47),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.SPECULAR),
+    Sphere("refractive sphere", 16.5, Vector3(73, 16.5, 78),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.REFRACTIVE),
+    Sphere("light", 10,  Vector3(50, 70, 81.6), e=Vector3(12, 12, 12))
 ]
 
 
