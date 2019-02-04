@@ -14,16 +14,16 @@ REFRACTIVE_INDEX_OUT = 1.0
 REFRACTIVE_INDEX_IN = 1.5
 
 spheres = [
-        Sphere(1e5,  Vector3(1e5 + 1, 40.8, 81.6),   f=Vector3(0.75,0.25,0.25)), #red wall
-	    Sphere(1e5,  Vector3(-1e5 + 99, 40.8, 81.6), f=Vector3(0.25,0.25,0.75)), #blue wall
-	    Sphere(1e5,  Vector3(50, 40.8, 1e5),         f=Vector3(0.75, 0.75, 0.75)), #gray wall
-	    Sphere(1e5,  Vector3(50, 40.8, -1e5 + 170)),
-	    Sphere(1e5,  Vector3(50, 1e5, 81.6),         f=Vector3(0.75, 0.75, 0.75)), #gray wall
-	    Sphere(1e5,  Vector3(50, -1e5 + 81.6, 81.6), f=Vector3(0.75, 0.75, 0.75)), #gray wall
-	    Sphere(16.5, Vector3(27, 16.5, 47),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.SPECULAR), #reflective sphere
-	    Sphere(16.5, Vector3(73, 16.5, 78),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.REFRACTIVE), #refractive
-	    Sphere(600,  Vector3(50, 681.6 - .27, 81.6), e=Vector3(12, 12, 12)) #light
-        ]
+    Sphere("red wall", 1e5,  Vector3(1e5 + 1, 40.8, 81.6),   f=Vector3(0.75,0.25,0.25)), #red wall
+    Sphere("blue wall", 1e5,  Vector3(-1e5 + 99, 40.8, 81.6), f=Vector3(0.25,0.25,0.75)), #blue wall
+    Sphere("gray wall", 1e5,  Vector3(50, 40.8, 1e5),         f=Vector3(0.75, 0.75, 0.75)), #gray wall
+    Sphere("env", 1e5,  Vector3(50, 40.8, -1e5 + 170)),
+    Sphere("celing", 1e5,  Vector3(50, 1e5, 81.6),         f=Vector3(0.75, 0.75, 0.75)), #gray wall
+    Sphere("floor", 1e5,  Vector3(50, -1e5 + 81.6, 81.6), f=Vector3(0.75, 0.75, 0.75)), #gray wall
+    Sphere("reflective sphere", 16.5, Vector3(27, 16.5, 47),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.SPECULAR), #reflective sphere
+    Sphere("refractive sphere", 16.5, Vector3(73, 16.5, 78),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.REFRACTIVE), #refractive
+    Sphere("light", 10,  Vector3(50, 70, 81.6), e=Vector3(12, 12, 12)) #light
+]
 
 
 def intersect(ray):
@@ -68,12 +68,12 @@ def radiance(ray, rng):
         # Next path segment
         if shape.reflection_t == Sphere.Reflection_t.SPECULAR:
             d = ideal_specular_reflect(r.d, n)
-            r = Ray(p, d, tmin=Sphere.EPSILON_SPHERE, depth=r.depth + 1)
+            r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
             continue
         elif shape.reflection_t == Sphere.Reflection_t.REFRACTIVE:
             d, pr = ideal_specular_transmit(r.d, n, REFRACTIVE_INDEX_OUT, REFRACTIVE_INDEX_IN, rng)
             F *= pr
-            r = Ray(p, d, tmin=Sphere.EPSILON_SPHERE, depth=r.depth + 1)
+            r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
             continue
         else:
             w = n if n.dot(r.d) < 0 else -n
@@ -82,7 +82,7 @@ def radiance(ray, rng):
 
             sample_d = cosine_weighted_sample_on_hemisphere(rng.uniform_float(), rng.uniform_float())
             d = (sample_d[0] * u + sample_d[1] * v + sample_d[2] * w).normalize()
-            r = Ray(p, d, tmin=Sphere.EPSILON_SPHERE, depth=r.depth + 1)
+            r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
             continue
 
 import sys
@@ -126,7 +126,7 @@ if __name__ == "__main__":
                 cam_y_multiplier = (dy + y) / h - 0.5
 
                 directional_vec = cam_x * cam_x_multiplier + cam_y * cam_y_multiplier + gaze
-                L = radiance(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON_SPHERE), rng)
+                L = radiance(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
                 Ls[i] +=  (1.0 / nb_samples) * Vector3.clamp(L)
 
     write_ppm(w, h, Ls)
