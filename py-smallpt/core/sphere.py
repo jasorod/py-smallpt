@@ -34,6 +34,10 @@ class Sphere(object):
         op = self.p - ray.o
         dop = ray.d.dot(op)
 
+        #if the ray is pointing in the opposite direction from the sphere, then short-circuit exit
+        if dop < 0:
+            return False
+
         #check to make sure the ray actually intersects the sphere at some point on the sphere
         D = ((dop * dop) + (self.r * self.r)) - op.dot(op)
         if D < 0:

@@ -1,5 +1,6 @@
-from math import isnan, sqrt, pow, floor, ceil, trunc
+from math import isnan, sqrt, pow, floor, ceil, trunc, pi, sin, cos
 from math_tools import clamp
+from copy import copy
 
 class Vector3(object):
 
@@ -198,5 +199,6 @@ class Vector3(object):
         return v1 + a * (v2 - v1)
 
     @classmethod
-    def permute(cls, v, x, y, z):
-        return Vector3(v.raw[x], v.raw[y], v.raw[z])
+    def permute(cls, v):
+        return cls(v.raw[1], v.raw[2], v.raw[0])
+    

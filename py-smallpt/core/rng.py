@@ -11,3 +11,6 @@ class RNG(object):
 
     def uniform_float(self):
         return self.rnd.random()
+
+    def uniform_range_float(self, a, b):
+        return self.rnd.uniform(a, b)
