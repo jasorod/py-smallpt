@@ -93,6 +93,41 @@ def radiance(ray, rng):
             r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
             continue
 
+def indirect_light_pass(ray, rng):
+    r = ray
+    L = Vector3()
+
+    while (True):
+        hit, id = intersect(r)
+        if (not hit):
+            return L
+
+        shape = spheres[id]
+        p = r(r.tmax)
+        n = (p - shape.p).normalize()
+
+        # Next path segment
+        if shape.reflection_t == Sphere.Reflection_t.SPECULAR:
+            d = ideal_specular_reflect(r.d, n)
+            r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth)
+            continue
+        elif shape.reflection_t == Sphere.Reflection_t.REFRACTIVE:
+            d, pr = ideal_specular_transmit(r.d, n, REFRACTIVE_INDEX_OUT, REFRACTIVE_INDEX_IN, rng)
+            r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth)
+            continue
+        else:
+            w = n if n.dot(r.d) < 0 else -n
+            u = (Vector3(0.0, 1.0, 0.0) if abs(w[0]) > 0.1 else Vector3(1.0, 0.0, 0.0)).cross(w).normalize()
+            v = w.cross(u)
+
+            sample_d = cosine_weighted_sample_on_hemisphere(rng.uniform_float(), rng.uniform_float())
+            d = (sample_d[0] * u + sample_d[1] * v + sample_d[2] * w).normalize()
+            r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
+            break
+
+    return shadow_ray_pass(r, rng)
+
+
 def shadow_ray_pass(ray, rng):
     r = ray
     L = Vector3()
@@ -209,7 +244,7 @@ if __name__ == "__main__":
                 cam_y_multiplier = (dy + y) / h - 0.5
 
                 directional_vec = cam_x * cam_x_multiplier + cam_y * cam_y_multiplier + gaze
-                L = shadow_ray_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
+                L = indirect_light_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
                 Ls[i] +=  (1.0 / nb_samples) * Vector3.clamp(L)
 
     write_ppm(w, h, Ls)
