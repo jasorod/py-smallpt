@@ -49,50 +49,6 @@ def lights():
 
     return light_list
 
-def radiance(ray, rng):
-    r = ray
-    L = Vector3()
-    F = Vector3(1.0, 1.0, 1.0)
-
-    while (True):
-        hit, id = intersect(r)
-        if (not hit):
-            return L
-
-        shape = spheres[id]
-        p = r(r.tmax)
-        n = (p - shape.p).normalize()
-
-        L += F * shape.e
-        F *= shape.f
-        
-	    # Russian roulette
-        if r.depth > 4:
-            continue_probability = shape.f.max_value()
-            if rng.uniform_float() >= continue_probability:
-                return L
-            F /= continue_probability
-
-        # Next path segment
-        if shape.reflection_t == Sphere.Reflection_t.SPECULAR:
-            d = ideal_specular_reflect(r.d, n)
-            r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
-            continue
-        elif shape.reflection_t == Sphere.Reflection_t.REFRACTIVE:
-            d, pr = ideal_specular_transmit(r.d, n, REFRACTIVE_INDEX_OUT, REFRACTIVE_INDEX_IN, rng)
-            F *= pr
-            r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
-            continue
-        else:
-            w = n if n.dot(r.d) < 0 else -n
-            u = (Vector3(0.0, 1.0, 0.0) if abs(w[0]) > 0.1 else Vector3(1.0, 0.0, 0.0)).cross(w).normalize()
-            v = w.cross(u)
-
-            sample_d = cosine_weighted_sample_on_hemisphere(rng.uniform_float(), rng.uniform_float())
-            d = (sample_d[0] * u + sample_d[1] * v + sample_d[2] * w).normalize()
-            r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
-            continue
-
 def indirect_light_pass(ray, rng):
     r = ray
     L = Vector3()
@@ -208,6 +164,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description= "Small python based path tracer")
 parser.add_argument("--samples", type=int, default=4)
+parser.add_argument("--passtype", type=str, choices=['albedo, normal, indirect, shadow'], default="shadow")
 args = parser.parse_args()
 
 if __name__ == "__main__":
@@ -244,7 +201,17 @@ if __name__ == "__main__":
                 cam_y_multiplier = (dy + y) / h - 0.5
 
                 directional_vec = cam_x * cam_x_multiplier + cam_y * cam_y_multiplier + gaze
-                L = indirect_light_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
+
+                if args.passtype is "shadow":
+                    L = shadow_ray_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
+                elif args.passtype is "albedo":
+                    L = albedo_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
+                elif args.passtype is "normal":
+                    L = normal_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
+                elif args.passtype is "indirect":
+                    L = normal_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
+                else
+
                 Ls[i] +=  (1.0 / nb_samples) * Vector3.clamp(L)
 
-    write_ppm(w, h, Ls)
+    write_ppm(w, h, Ls, fname = arg.passtype + "_pass_" + str(nb_samples) + "spp.ppm")
