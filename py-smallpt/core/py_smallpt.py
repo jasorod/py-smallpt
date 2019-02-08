@@ -137,13 +137,28 @@ def albedo_pass(ray, rng):
     L = Vector3()
     F = Vector3(1.0, 1.0, 1.0)
 
-    hit, id = intersect(r)
-    if (not hit):
-        return L
+    while True:
+        hit, id = intersect(r)
+        if (not hit):
+            return L
 
-    shape = spheres[id]
-    L = shape.f
-    return L
+        shape = spheres[id]
+        p = r(r.tmax)
+        n = (p - shape.p).normalize()
+        F *= shape.f
+
+        if shape.reflection_t == Sphere.Reflection_t.SPECULAR:
+            d = ideal_specular_reflect(r.d, n)
+            r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
+            continue
+        elif shape.reflection_t == Sphere.Reflection_t.REFRACTIVE:
+            d, pr = ideal_specular_transmit(r.d, n, REFRACTIVE_INDEX_OUT, REFRACTIVE_INDEX_IN, rng)
+            F *= pr
+            r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
+            continue
+        else:
+            L = F
+            return L
 
 def normal_pass(ray, rng):
     r = ray
