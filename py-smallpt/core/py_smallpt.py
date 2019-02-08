@@ -164,7 +164,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description= "Small python based path tracer")
 parser.add_argument("--samples", type=int, default=4)
-parser.add_argument("--passtype", type=str, choices=['albedo, normal, indirect, shadow'], default="shadow")
+parser.add_argument("--passtype", type=str, choices=['albedo', 'normal', 'indirect', 'shadow'], default="shadow")
 args = parser.parse_args()
 
 if __name__ == "__main__":
@@ -201,17 +201,17 @@ if __name__ == "__main__":
                 cam_y_multiplier = (dy + y) / h - 0.5
 
                 directional_vec = cam_x * cam_x_multiplier + cam_y * cam_y_multiplier + gaze
+                L = Vector3()
 
-                if args.passtype is "shadow":
+                if args.passtype == "shadow":
                     L = shadow_ray_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
-                elif args.passtype is "albedo":
+                elif args.passtype == "albedo":
                     L = albedo_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
-                elif args.passtype is "normal":
+                elif args.passtype == "normal":
                     L = normal_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
-                elif args.passtype is "indirect":
-                    L = normal_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
-                else
+                elif args.passtype == "indirect":
+                    L = indirect_light_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
 
                 Ls[i] +=  (1.0 / nb_samples) * Vector3.clamp(L)
 
-    write_ppm(w, h, Ls, fname = arg.passtype + "_pass_" + str(nb_samples) + "spp.ppm")
+    write_ppm(w, h, Ls, fname = args.passtype + "_pass_" + str(nb_samples) + "spp.ppm")
