@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
-from image_io import write_ppm
-from math import *
+import OpenEXR
+import array
+import math
 from copy import copy
 from ray import Ray
 from rng import RNG
@@ -68,7 +69,7 @@ def indirect_light_pass(ray, rng):
             r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth)
             continue
         elif shape.reflection_t == Sphere.Reflection_t.REFRACTIVE:
-            d, pr = ideal_specular_transmit(r.d, n, REFRACTIVE_INDEX_OUT, REFRACTIVE_INDEX_IN, rng)
+            d = ideal_specular_transmit(r.d, n, REFRACTIVE_INDEX_OUT, REFRACTIVE_INDEX_IN, rng)
             r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth)
             continue
         else:
@@ -81,10 +82,10 @@ def indirect_light_pass(ray, rng):
             r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
             break
 
-    return shadow_ray_pass(r, rng)
+    return shadow_ray_pass(r, rng, True)
 
 
-def shadow_ray_pass(ray, rng):
+def shadow_ray_pass(ray, rng, indirectPass = False):
     r = ray
     L = Vector3()
     F = Vector3(1.0, 1.0, 1.0)
@@ -98,10 +99,14 @@ def shadow_ray_pass(ray, rng):
         p = r(r.tmax)
         n = (p - shape.p).normalize()
 
-        F *= shape.f
+        if indirectPass:
+            F *= shape.f
 
         if shape.name == "light":
-            return shape.e
+            if indirectPass:
+                return shape.e / math.pow(r.tmax, 2)
+            else:
+                return shape.e
 
         # Bounce another ray if the surface is reflective or refractive
         if shape.reflection_t == Sphere.Reflection_t.SPECULAR:
@@ -118,9 +123,9 @@ def shadow_ray_pass(ray, rng):
         for light in light_list:
             #get the spherical angle of the light projected from the point on the surface
             light_vec = light.p - p
-            cos_projected_angle = sqrt(1 - (pow(light.r, 2) / light_vec.norm2_squared()))
-            projected_angle = acos(cos_projected_angle)
-            shadow_ray_dir = unit_hemisphere_vector(light_vec, rng.uniform_float() * projected_angle, rng.uniform_range_float(0, 2 * pi))
+            cos_projected_angle = math.sqrt(1 - (pow(light.r, 2) / light_vec.norm2_squared()))
+            projected_angle = math.acos(cos_projected_angle)
+            shadow_ray_dir = unit_hemisphere_vector(light_vec, rng.uniform_float() * projected_angle, rng.uniform_range_float(0, 2 * math.pi))
             shadow_ray_vec = Ray(p, shadow_ray_dir, tmin=Sphere.EPSILON, depth = r.depth + 1)
 
             hit, id = intersect(shadow_ray_vec)
@@ -156,6 +161,9 @@ def albedo_pass(ray, rng):
             F *= pr
             r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
             continue
+        elif shape.name == "light":
+            L = shape.e
+            return L
         else:
             L = F
             return L
@@ -174,12 +182,24 @@ def normal_pass(ray, rng):
     n *= 0.5
     return n
 
+def depth_pass(ray, rng):
+    r = ray
+
+    hit, id = intersect(r)
+    if (not hit):
+        return Vector3(1e5, 1e5, 1e5)
+
+    shape = spheres[id]
+    p = r(r.tmax)
+
+    return Vector3(p.z(), p.z(), p.z())
+
 import sys
 import argparse
 
 parser = argparse.ArgumentParser(description= "Small python based path tracer")
 parser.add_argument("--samples", type=int, default=4)
-parser.add_argument("--passtype", type=str, choices=['albedo', 'normal', 'indirect', 'shadow'], default="shadow")
+parser.add_argument("--passtype", type=str, choices=['albedo', 'normal', 'indirect', 'direct', 'depth'], default="direct")
 args = parser.parse_args()
 
 if __name__ == "__main__":
@@ -217,16 +237,31 @@ if __name__ == "__main__":
 
                 directional_vec = cam_x * cam_x_multiplier + cam_y * cam_y_multiplier + gaze
                 L = Vector3()
+                ray = Ray(eye + directional_vec * 130, directional_vec.normalize())
 
-                if args.passtype == "shadow":
-                    L = shadow_ray_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
+                if args.passtype == "direct":
+                    L = shadow_ray_pass(ray, rng)
                 elif args.passtype == "albedo":
-                    L = albedo_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
+                    L = albedo_pass(ray, rng)
                 elif args.passtype == "normal":
-                    L = normal_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
+                    L = normal_pass(ray, rng)
                 elif args.passtype == "indirect":
-                    L = indirect_light_pass(Ray(eye + directional_vec * 130, directional_vec.normalize(), tmin=Sphere.EPSILON), rng)
+                    L = indirect_light_pass(ray, rng)
+                elif args.passtype == "depth":
+                    L = depth_pass(ray, rng)
 
-                Ls[i] +=  (1.0 / nb_samples) * Vector3.clamp(L)
+                Ls[i] +=  (1.0 / nb_samples) * L
 
-    write_ppm(w, h, Ls, fname = args.passtype + "_pass_" + str(nb_samples) + "spp.ppm")
+    #split into separate color planes
+    Lred= []
+    Lgreen = []
+    Lblue = []
+    for color in Ls:
+        Lred.append(color.x())
+        Lgreen.append(color.y())
+        Lblue.append(color.z())
+
+    print("Writing Output to " + args.passtype + "_" + str(args.samples) + "spp.exr")
+
+    exr = OpenEXR.OutputFile(args.passtype + "_" + str(args.samples) + "spp.exr", OpenEXR.Header(w, h))
+    exr.writePixels({'R': array.array('f', Lred).tostring(), 'G': array.array('f', Lgreen).tostring(), 'B': array.array('f', Lblue).tostring()})
