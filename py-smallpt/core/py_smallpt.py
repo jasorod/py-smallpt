@@ -81,9 +81,15 @@ def indirect_light_pass(ray, rng):
             sample_d = cosine_weighted_sample_on_hemisphere(rng.uniform_float(), rng.uniform_float())
             d = (sample_d[0] * u + sample_d[1] * v + sample_d[2] * w).normalize()
             r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
-            break
 
-    return shadow_ray_pass(r, rng, True) * math.pi
+            test_ray = copy(r)
+            hit, id = intersect(test_ray)
+            if spheres[id].name == "light":
+                continue
+
+            return shadow_ray_pass(r, rng, True) * math.pi
+
+    
 
 
 def shadow_ray_pass(ray, rng, indirectPass = False):
@@ -251,6 +257,9 @@ if __name__ == "__main__":
                     L = normal_pass(ray, rng)
                 elif args.passtype == "indirect":
                     L = indirect_light_pass(ray, rng)
+
+                    if L.x() > 2 or L.y() > 2 or L.z() > 2:
+                        print("X: " + str(x) + " Y: " + str(y) + " " + str(L))
                 elif args.passtype == "depth":
                     L = depth_pass(ray, rng)
 
