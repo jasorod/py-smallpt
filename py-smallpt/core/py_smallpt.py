@@ -3,6 +3,7 @@
 import OpenEXR
 import array
 import math
+import pdb
 from copy import copy
 from ray import Ray
 from rng import RNG
@@ -16,15 +17,15 @@ REFRACTIVE_INDEX_OUT = 1.0
 REFRACTIVE_INDEX_IN = 1.5
 
 spheres = [
-    Sphere("red wall", 1e5,  Vector3(-1e5, 40.8, 81.6),   f=Vector3(0.75,0.25,0.25)),
-    Sphere("blue wall", 1e5,  Vector3(1e5 + 99, 40.8, 81.6), f=Vector3(0.25,0.25,0.75)),
-    Sphere("gray wall", 1e5,  Vector3(50, 40.8, -1e5),         f=Vector3(0.75, 0.75, 0.75)),
-    Sphere("env", 1e5,  Vector3(50, 40.8, 1e5 + 170)),
-    Sphere("celing", 1e5,  Vector3(50, 1e5 + 81.6, 81.6),         f=Vector3(0.75, 0.75, 0.75)),
-    Sphere("floor", 1e5,  Vector3(50, -1e5, 81.6), f=Vector3(0.75, 0.75, 0.75)),
-    Sphere("reflective sphere", 16.5, Vector3(27, 16.5, 47),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.SPECULAR),
-    Sphere("refractive sphere", 16.5, Vector3(73, 16.5, 78),          f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.SPECULAR),
-    Sphere("light", 10,  Vector3(50, 70, 81.6), e=Vector3(2000, 2000, 2000))
+    Sphere("red wall", 1e5,  Vector3(-1e5, 40.8, 81.6),                 f=Vector3(0.75, 0.25, 0.25)),
+    Sphere("blue wall", 1e5,  Vector3(1e5 + 99, 40.8, 81.6),            f=Vector3(0.25, 0.25, 0.75)),
+    Sphere("gray wall", 1e5,  Vector3(50, 40.8, -1e5),                  f=Vector3(0.75, 0.75, 0.75)),
+    Sphere("env", 1e5,  Vector3(50, 40.8, 1e5 + 170),                   f=Vector3()),
+    Sphere("ceiling", 1e5,  Vector3(50, 1e5 + 81.6, 81.6),              f=Vector3(0.75, 0.75, 0.75)),
+    Sphere("floor", 1e5,  Vector3(50, -1e5, 81.6),                      f=Vector3(0.75, 0.75, 0.75)),
+    Sphere("reflective sphere", 16.5, Vector3(27, 16.5, 47),            f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.SPECULAR),
+    Sphere("refractive sphere", 16.5, Vector3(73, 16.5, 78),            f=Vector3(0.999, 0.999, 0.999), reflection_t=Sphere.Reflection_t.SPECULAR),
+    Sphere("light", 10,  Vector3(50, 70, 81.6), e=Vector3(1, 1, 1))
 ]
 
 def intersect(ray):
@@ -82,7 +83,7 @@ def indirect_light_pass(ray, rng):
             r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
             break
 
-    return shadow_ray_pass(r, rng, True)
+    return shadow_ray_pass(r, rng, True) * math.pi
 
 
 def shadow_ray_pass(ray, rng, indirectPass = False):
@@ -103,10 +104,7 @@ def shadow_ray_pass(ray, rng, indirectPass = False):
             F *= shape.f
 
         if shape.name == "light":
-            if indirectPass:
-                return shape.e / math.pow(r.tmax, 2)
-            else:
-                return shape.e
+            return shape.e
 
         # Bounce another ray if the surface is reflective or refractive
         if shape.reflection_t == Sphere.Reflection_t.SPECULAR:
@@ -129,13 +127,19 @@ def shadow_ray_pass(ray, rng, indirectPass = False):
             shadow_ray_vec = Ray(p, shadow_ray_dir, tmin=Sphere.EPSILON, depth = r.depth + 1)
 
             hit, id = intersect(shadow_ray_vec)
-            if spheres[id].name != "light":
+            if spheres[id] != light:
                 continue
             else:
-                cos_incident_angle = shadow_ray_vec.d.dot(n)
-                L += F * ((spheres[id].e / pow(shadow_ray_vec.tmax, 2)) * cos_incident_angle)
+                light_normal = (shadow_ray_vec(shadow_ray_vec.tmax) - light.p).normalize()
+                neg_shadow_ray_direction = shadow_ray_vec.d * -1
+                cos_incident_angle_surface = shadow_ray_vec.d.dot(n)
+                cos_incident_angle_light = neg_shadow_ray_direction.dot(light_normal)
 
-        return L 
+                assert cos_incident_angle_light >= 0 and cos_incident_angle_surface >= 0, "Cosine of light angles are non-positive"
+                
+                L += F * ((light.e / math.pow(shadow_ray_vec.tmax, 2)) * cos_incident_angle_surface * cos_incident_angle_light) 
+
+        return L
 
 def albedo_pass(ray, rng):
     r = ray
