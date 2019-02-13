@@ -131,6 +131,7 @@ def shadow_ray_pass(ray, rng, indirectPass = False):
             projected_angle = math.acos(cos_projected_angle)
             shadow_ray_dir = unit_hemisphere_vector(light_vec, rng.uniform_float() * projected_angle, rng.uniform_range_float(0, 2 * math.pi))
             shadow_ray_vec = Ray(p, shadow_ray_dir, tmin=Sphere.EPSILON, depth = r.depth + 1)
+            inv_shadow_ray_pdf = 2 * math.pi * (1 - cos_projected_angle)
 
             hit, id = intersect(shadow_ray_vec)
             if spheres[id] != light:
@@ -143,7 +144,7 @@ def shadow_ray_pass(ray, rng, indirectPass = False):
 
                 assert cos_incident_angle_light >= 0 and cos_incident_angle_surface >= 0, "Cosine of light angles are non-positive"
                 
-                L += F * ((light.e / math.pow(shadow_ray_vec.tmax, 2)) * cos_incident_angle_surface * cos_incident_angle_light) 
+                L += F * light.e * cos_incident_angle_surface * cos_incident_angle_light * inv_shadow_ray_pdf
 
         return L
 
