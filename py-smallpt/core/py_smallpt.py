@@ -82,15 +82,7 @@ def indirect_light_pass(ray, rng):
             d = (sample_d[0] * u + sample_d[1] * v + sample_d[2] * w).normalize()
             r = Ray(p, d, tmin=Sphere.EPSILON, depth=r.depth + 1)
 
-            test_ray = copy(r)
-            hit, id = intersect(test_ray)
-            if spheres[id].name == "light":
-                continue
-
-            return shadow_ray_pass(r, rng, True) * math.pi
-
-    
-
+            return shadow_ray_pass(r, rng, True) * d.dot(w) * math.pi
 
 def shadow_ray_pass(ray, rng, indirectPass = False):
     r = ray
@@ -107,7 +99,10 @@ def shadow_ray_pass(ray, rng, indirectPass = False):
         n = (p - shape.p).normalize()
 
         if indirectPass:
-            F *= shape.f
+            if shape.reflection_t == Sphere.Reflection_t.DIFFUSE:
+                F *= (shape.f / math.pi)
+            else:
+                F *= shape.f
 
         if shape.name == "light":
             return shape.e
@@ -137,14 +132,8 @@ def shadow_ray_pass(ray, rng, indirectPass = False):
             if spheres[id] != light:
                 continue
             else:
-                light_normal = (shadow_ray_vec(shadow_ray_vec.tmax) - light.p).normalize()
-                neg_shadow_ray_direction = shadow_ray_vec.d * -1
                 cos_incident_angle_surface = shadow_ray_vec.d.dot(n)
-                cos_incident_angle_light = neg_shadow_ray_direction.dot(light_normal)
-
-                assert cos_incident_angle_light >= 0 and cos_incident_angle_surface >= 0, "Cosine of light angles are non-positive"
-                
-                L += F * light.e * cos_incident_angle_surface * cos_incident_angle_light * inv_shadow_ray_pdf
+                L += F * light.e * cos_incident_angle_surface * inv_shadow_ray_pdf * math.pi
 
         return L
 
@@ -161,7 +150,11 @@ def albedo_pass(ray, rng):
         shape = spheres[id]
         p = r(r.tmax)
         n = (p - shape.p).normalize()
-        F *= shape.f
+
+        if shape.reflection_t == Sphere.Reflection_t.DIFFUSE:
+            F *= (shape.f / math.pi)
+        else:
+            F *= shape.f
 
         if shape.reflection_t == Sphere.Reflection_t.SPECULAR:
             d = ideal_specular_reflect(r.d, n)
@@ -200,7 +193,6 @@ def depth_pass(ray, rng):
     if (not hit):
         return Vector3(1e5, 1e5, 1e5)
 
-    shape = spheres[id]
     p = r(r.tmax)
 
     return Vector3(p.z(), p.z(), p.z())
@@ -258,9 +250,6 @@ if __name__ == "__main__":
                     L = normal_pass(ray, rng)
                 elif args.passtype == "indirect":
                     L = indirect_light_pass(ray, rng)
-
-                    if L.x() > 2 or L.y() > 2 or L.z() > 2:
-                        print("X: " + str(x) + " Y: " + str(y) + " " + str(L))
                 elif args.passtype == "depth":
                     L = depth_pass(ray, rng)
 
